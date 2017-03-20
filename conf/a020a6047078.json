@@ -1,0 +1,13 @@
+{
+    "sleep_time": 60000,
+    "exception_raise": false,
+    "exception_wait": 10,
+    "read": {
+        "dht22": {
+            "pin": 14
+        }
+    },
+    "publish": {
+        "server": "curumo.domecek"
+    }
+}

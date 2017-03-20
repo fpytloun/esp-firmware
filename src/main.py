@@ -1,28 +1,43 @@
+import sys
 import time
 import json
-import esp
 import machine
+import network
+import ubinascii
+
+MACHINE_ID = ubinascii.hexlify(network.WLAN().config('mac')).decode()
+
+# Default configuration
+CONFIG = {
+    "sleep_time": 60000,
+    "exception_raise": True,
+    "exception_wait": 30,
+    "publish": {
+        "topic_base": "esp/{0}"
+    },
+}
 
 
 def read_dht11(pin):
     import dht
     d = dht.DHT11(machine.Pin(pin))
+    d.measure()
+    print("DHT11: {0}C, {1}%".format(d.temperature(), d.humidity()))
+    return({
+        'temperature': d.temperature(),
+        'humidity': d.humidity()
+    })
 
-    retry = 0
-    while retry < 3:
-        try:
-            d.measure()
-            print("DHT11: {0}C, {1}%".format(d.temperature(), d.humidity()))
-            return({
-                'temperature': d.temperature(),
-                'humidity': d.humidity()
-            })
-        except Exception as e:
-            retry += 1
-            print(e)
-            if retry == 3:
-                raise
-            time.sleep(3)
+
+def read_dht22(pin):
+    import dht
+    d = dht.DHT22(machine.Pin(pin))
+    d.measure()
+    print("DHT22: {0}C, {1}%".format(d.temperature(), d.humidity()))
+    return({
+        'temperature': d.temperature(),
+        'humidity': d.humidity()
+    })
 
 
 def publish_data(server, topic, data):
@@ -52,12 +67,53 @@ def deepsleep(sleep_time=60000):
     machine.deepsleep()
 
 
+def dictmerge(a, b, path=None):
+    if path is None:
+        path = []
+    for key in b:
+        if key in a:
+            if isinstance(a[key], dict) and isinstance(b[key], dict):
+                dictmerge(a[key], b[key], path + [str(key)])
+            elif a[key] == b[key]:
+                pass
+            else:
+                a[key] = b[key]
+        else:
+            a[key] = b[key]
+    return a
+
+
+def parse_config(config_file=None, default=None):
+    if not config_file:
+        config_file = "{0}.json".format(MACHINE_ID)
+
+    with open(config_file, 'r') as fh:
+        data = json.load(fh)
+
+    return dictmerge(CONFIG, data)
+
+
 def main():
-    topic_base = "esp/{0}".format(esp.flash_id())
-    data = read_dht11(14)
-    publish_data("curumo.domecek", "{0}/dht11".format(topic_base), json.dumps(data))
-    deepsleep(60000)
+    conf = parse_config(None, CONFIG)
+    topic_base = conf['publish']['topic_base'].format(MACHINE_ID)
+
+    for name, args in conf.get('read', {}).items():
+        func_name = args.get('function', 'read_{0}'.format(name))
+        func = globals().get(func_name)
+        data = func(**args.get('args', args))
+        publish_data(conf['publish']['server'], "{0}/{1}".format(topic_base, name), json.dumps(data))
+
+    deepsleep(conf['sleep_time'])
 
 
 if __name__ == '__main__':
-    main()
+    while True:
+        try:
+            main()
+        except Exception as e:
+            if CONFIG.get('exception_raise', True):
+                raise e
+            else:
+                sys.print_exception(e)
+                print("Sleeping for {0}".format(CONFIG['exception_wait']))
+                time.sleep(CONFIG['exception_wait'])
