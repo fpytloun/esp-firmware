@@ -1,7 +1,7 @@
 {
-    "friendly_name": "Bathroom",
+    "friendly_name": "Greenthumb",
     "device": {
-        "dht22": {
+        "dht11": {
             "pin": 14,
             "interval": 30
         }

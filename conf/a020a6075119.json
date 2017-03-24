@@ -1,13 +1,17 @@
 {
-    "sleep_time": 60000,
-    "exception_raise": false,
-    "exception_wait": 10,
-    "read": {
+    "friendly_name": "Portable",
+    "device": {
         "dht22": {
-            "pin": 14
+            "pin": 14,
+            "interval": 30
+        },
+        "rpm": {
+            "pin": 12,
+            "irq": true
         }
     },
     "publish": {
-        "server": "curumo.domecek"
+        "server": "curumo.domecek",
+        "interval": 60
     }
 }
