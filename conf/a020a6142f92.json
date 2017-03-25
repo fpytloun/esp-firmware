@@ -11,24 +11,14 @@
                 "interval": 60
             }
         },
-        "dht11": {
-            "pin": 12,
-            "read": {
-                "function": "read_dht11",
-                "interval": 30
-            },
-            "publish": {
-                "interval": 60
-            }
-        },
         "relay": {
             "pin": 13,
             "read": {
                 "function": "read_status",
-                "interval": 30
+                "interval": 10
             },
             "publish": {
-                "interval": 60
+                "interval": 10
             },
             "subscribe": {
                 "function": "toggle_status",
