@@ -1,13 +1,42 @@
 {
     "friendly_name": "Greenthumb",
     "device": {
-        "dht11": {
+        "dht22": {
             "pin": 14,
-            "interval": 30
+            "read": {
+                "function": "read_dht22",
+                "interval": 30
+            },
+            "publish": {
+                "interval": 60
+            }
+        },
+        "dht11": {
+            "pin": 12,
+            "read": {
+                "function": "read_dht11",
+                "interval": 30
+            },
+            "publish": {
+                "interval": 60
+            }
+        },
+        "relay": {
+            "pin": 13,
+            "read": {
+                "function": "read_status",
+                "interval": 30
+            },
+            "publish": {
+                "interval": 60
+            },
+            "subscribe": {
+                "function": "toggle_status",
+                "interval": 10
+            }
         }
     },
     "publish": {
-        "server": "curumo.domecek",
-        "interval": 60
+        "server": "curumo.domecek"
     }
 }

@@ -3,11 +3,16 @@
     "device": {
         "dht22": {
             "pin": 14,
-            "interval": 30
+            "read": {
+                "function": "read_dht22",
+                "interval": 30
+            },
+            "publish": {
+                "interval": 60
+            }
         }
     },
     "publish": {
-        "server": "curumo.domecek",
-        "interval": 60
+        "server": "curumo.domecek"
     }
 }
