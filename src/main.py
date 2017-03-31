@@ -9,6 +9,9 @@ from umqtt.simple import MQTTClient
 import micropython
 micropython.alloc_emergency_exception_buf(100)
 
+import gc
+gc.enable()
+
 MACHINE_ID = ubinascii.hexlify(network.WLAN().config('mac')).decode()
 global devices
 devices = {}
@@ -90,8 +93,8 @@ class Device(object):
             'value': self.pin.value()
         })
 
-    def write_status(self, value):
-        self.pin_out.value(value)
+    def write_status(self, topic, value):
+        self.pin_out.value(int(value))
 
     def toggle_status(self, *args, **kwargs):
         self.pin_out.value(0 if self.pin.value() else 1)
@@ -138,12 +141,6 @@ class Device(object):
         return ret
 
     def publish_data(self, *args, **kwargs):
-        # XXX: we receive following exception if called from callback:
-        #   IndexError: bytes index out of range
-        # but we can create connection from main and pass it to device objects,
-        # anyway this is still issue when reconnection is needed. Also we cannot
-        # handle catch exceptions from callbacks in main to simply reset.
-        # self.mqtt.connect()
         for dat in self.read_data()[1]:
             self.mqtt.publish(self.publish['topic'], str(json.dumps(dat)))
         print("Sent data to server {0}, topic {1}".format(self.publish['server'], self.publish['topic']))
@@ -167,15 +164,18 @@ def sleep(sleep_type, sleep_time=60000):
         machine.idle()
     if sleep_type == "sleep":
         machine.sleep()
+    if sleep_type == "wait":
+        time.sleep(sleep_time / 1000)
 
 
 class Config(object):
     # Default configuration
     CONFIG = {
-        "sleep_type": "idle",
+        "sleep_type": "wait",
         "sleep_time": 60000,
         "exception_raise": False,
         "exception_wait": 10,
+        "exception_reset": True,
         "publish": {
             "topic_base": "esp/{0}".format(MACHINE_ID),
             "interval": 30,
@@ -216,11 +216,10 @@ def main():
     conf = Config()
     client_id = "{0}".format(MACHINE_ID)
     mqtt = MQTTClient(bytes(client_id, 'ascii'), bytes(conf.config['publish']['server'], 'ascii'))
-    mqtt.connect()
     while True:
         try:
-            # if not mqtt.connect(clean_session=False):
-            #     print("Connected to {0} as client {1}".format(conf.config['publish']['server'], client_id))
+            if not mqtt.connect(clean_session=False):
+                print("Connected to {0} as client {1}".format(conf.config['publish']['server'], client_id))
 
             global devices
             # Initialize devices objects if not initialized yet
@@ -236,14 +235,28 @@ def main():
                     print("Initializing device {0} with args {1}".format(name, args))
                     devices[name] = Device(name, **args)
 
+            # Publish health
+            health_topic = "{0}/health".format(conf.config['publish']['topic_base'])
+            print("Publishing health status into topic {0}".format(health_topic))
+            mqtt.publish(health_topic, str(json.dumps({
+                'name': conf.config['friendly_name'] or MACHINE_ID,
+                'id': MACHINE_ID,
+                'devices': devices.keys(),
+                'mem_free': gc.mem_free(),
+                'mem_alloc': gc.mem_alloc(),
+            })))
+
             sleep(conf.config['sleep_type'], conf.config['sleep_time'])
         except Exception as e:
-            if conf.config.get('exception_raise', True):
-                raise e
-            else:
-                sys.print_exception(e)
-                print("Sleeping for {0}".format(conf.config['exception_wait']))
-                time.sleep(conf.config['exception_wait'])
+            if type(e) != 'KeyboardInterrupt':
+                if conf.config.get('exception_raise', True):
+                    raise e
+                else:
+                    sys.print_exception(e)
+                    print("Sleeping for {0}".format(conf.config['exception_wait']))
+                    time.sleep(conf.config['exception_wait'])
+                    if conf.config['exception_reset']:
+                        machine.reset()
 
 
 if __name__ == '__main__':

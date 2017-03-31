@@ -21,7 +21,7 @@
                 "interval": 10
             },
             "subscribe": {
-                "function": "toggle_status",
+                "function": "write_status",
                 "interval": 10
             }
         }
