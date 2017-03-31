@@ -22,8 +22,17 @@ def disable_ap():
     ap_if = network.WLAN(network.AP_IF)
     ap_if.active(False)
 
+
+def read_wifi_config():
+    with open('.wireless') as fh:
+        lines = fh.readlines()
+    return (lines[0].strip(), lines[1].strip())
+
 disable_ap()
-connect_wifi('domecek', 'akm2853cx7')
+
+cfg = read_wifi_config()
+print("Connecting to wireless network {0}".format(cfg[0]))
+connect_wifi(cfg[0], cfg[1])
 
 # import webrepl
 # webrepl.start()

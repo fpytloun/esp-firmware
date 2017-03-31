@@ -241,7 +241,6 @@ def main():
             mqtt.publish(health_topic, str(json.dumps({
                 'name': conf.config['friendly_name'] or MACHINE_ID,
                 'id': MACHINE_ID,
-                'devices': devices.keys(),
                 'mem_free': gc.mem_free(),
                 'mem_alloc': gc.mem_alloc(),
             })))
