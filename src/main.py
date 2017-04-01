@@ -4,17 +4,17 @@ import json
 import machine
 import network
 import ubinascii
+import dht
 from umqtt.simple import MQTTClient
 
 import micropython
 micropython.alloc_emergency_exception_buf(100)
 
 import gc
+gc.collect()
 gc.enable()
 
 MACHINE_ID = ubinascii.hexlify(network.WLAN().config('mac')).decode()
-global devices
-devices = {}
 
 
 class Device(object):
@@ -50,7 +50,10 @@ class Device(object):
 
         if publish:
             self.publish = publish
-            self.publish['topic'] = publish.get('topic') or "{0}/{1}".format(publish['topic_base'], self.name)
+            self.publish['topic'] = publish.get('topic') or "{0}/{1}".format(
+                publish.get('topic_base', "esp/{0}".format(MACHINE_ID)),
+                self.name
+            )
             self.timer_publish = machine.Timer(-1)
             self.timer_publish.init(period=publish.get('interval', 30) * 1000, mode=machine.Timer.PERIODIC, callback=self.publish_data)
 
@@ -58,7 +61,10 @@ class Device(object):
             self.subscribe = subscribe
             func_name = subscribe.get('function', 'write_{0}'.format(name))
             self.function_write = getattr(self, func_name)
-            self.subscribe['topic'] = subscribe.get('topic') or "{0}/{1}/control".format(subscribe['topic_base'], self.name)
+            self.subscribe['topic'] = subscribe.get('topic') or "{0}/{1}/control".format(
+                subscribe.get('topic_base', "esp/{0}".format(MACHINE_ID)),
+                self.name
+            )
             self.mqtt.set_callback(self._callback_subscribe)
             self.mqtt.subscribe(self.subscribe['topic'])
             self.timer_subscribe = machine.Timer(-1)
@@ -78,7 +84,6 @@ class Device(object):
             self.data.append(data)
 
     def read_dht11(self, *args, **kwargs):
-        import dht
         d = dht.DHT11(machine.Pin(self.pin_id))
         d.measure()
         print("{0}: {1}C, {2}%".format(self.name, d.temperature(), d.humidity()))
@@ -100,7 +105,6 @@ class Device(object):
         self.pin_out.value(0 if self.pin.value() else 1)
 
     def read_dht22(self, *args, **kwargs):
-        import dht
         d = dht.DHT22(machine.Pin(self.pin_id))
         d.measure()
         print("{0}: {1}C, {2}%".format(self.name, d.temperature(), d.humidity()))
@@ -170,14 +174,7 @@ def sleep(sleep_type, sleep_time=60000):
 
 class Config(object):
     # Default configuration
-    CONFIG = {
-        "publish": {
-            "topic_base": "esp/{0}".format(MACHINE_ID),
-        },
-        "subscribe": {
-            "topic_base": "esp/{0}".format(MACHINE_ID),
-        },
-    }
+    CONFIG = {}
 
     def __init__(self, config_file=None):
         self.config_file = config_file if config_file else "{0}.json".format(MACHINE_ID)
@@ -209,34 +206,33 @@ def main():
     conf = Config()
     client_id = "{0}".format(MACHINE_ID)
     mqtt = MQTTClient(bytes(client_id, 'ascii'), bytes(conf.config['publish']['server'], 'ascii'))
+    devices = {}
     while True:
         try:
             if not mqtt.connect(clean_session=False):
                 print("Connected to {0} as client {1}".format(conf.config['publish']['server'], client_id))
 
-            global devices
             # Initialize devices objects if not initialized yet
-            for name, args in conf.config.get('device', {}).items():
-                if name not in devices.keys():
-                    if 'publish' in args.keys():
-                        args['publish'].update(conf.config['publish'])
-                    if 'subscribe' in args.keys():
-                        args['subscribe'].update(conf.config['subscribe'])
-
-                    args['mqtt'] = mqtt
-
-                    print("Initializing device {0} with args {1}".format(name, args))
-                    devices[name] = Device(name, **args)
+            if not devices:
+                for name, args in conf.config.get('device', {}).items():
+                    if name not in devices.keys():
+                        args['mqtt'] = mqtt
+                        print("Initializing device {0} with args {1}".format(name, args))
+                        devices[name] = Device(name, **args)
+                gc.collect()
 
             # Publish health
-            health_topic = "{0}/health".format(conf.config['publish']['topic_base'])
-            print("Publishing health status into topic {0}".format(health_topic))
-            mqtt.publish(health_topic, str(json.dumps({
-                'name': conf.config['friendly_name'] or MACHINE_ID,
-                'id': MACHINE_ID,
-                'mem_free': gc.mem_free(),
-                'mem_alloc': gc.mem_alloc(),
-            })))
+            print("Publishing health status into topic {0}".format("{0}/health".format(
+                conf.config['publish'].get('topic_base', "esp/{0}".format(MACHINE_ID))
+            )))
+            mqtt.publish("{0}/health".format(conf.config['publish'].get('topic_base', "esp/{0}".format(MACHINE_ID))),
+                str(json.dumps({
+                    'name': conf.config.get('friendly_name', MACHINE_ID),
+                    'id': MACHINE_ID,
+                    'uptime': time.ticks_ms(),
+                    'mem_free': gc.mem_free(),
+                    'mem_alloc': gc.mem_alloc(),
+                })))
 
             sleep(conf.config.get('sleep_type', 'wait'), conf.config.get('sleep_time', 60000))
         except Exception as e:
