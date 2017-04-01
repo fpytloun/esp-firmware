@@ -175,7 +175,8 @@ class Config(object):
         "sleep_time": 60000,
         "exception_raise": False,
         "exception_wait": 10,
-        "exception_reset": True,
+        "exception_reset": False,
+        "exception_exit": True,
         "publish": {
             "topic_base": "esp/{0}".format(MACHINE_ID),
             "interval": 30,
@@ -256,6 +257,8 @@ def main():
                     time.sleep(conf.config['exception_wait'])
                     if conf.config['exception_reset']:
                         machine.reset()
+                    if conf.config['exception_exit']:
+                        sys.exit()
 
 
 if __name__ == '__main__':
