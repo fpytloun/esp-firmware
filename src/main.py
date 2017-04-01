@@ -12,7 +12,6 @@ micropython.alloc_emergency_exception_buf(100)
 
 import gc
 gc.collect()
-gc.enable()
 
 MACHINE_ID = ubinascii.hexlify(network.WLAN().config('mac')).decode()
 
@@ -218,7 +217,6 @@ def main():
                         args['mqtt'] = mqtt
                         print("Initializing device {0} with args {1}".format(name, args))
                         devices[name] = Device(name, **args)
-                gc.collect()
 
             # Publish health
             print("Publishing health status into topic {0}".format("{0}/health".format(
@@ -233,6 +231,7 @@ def main():
                     'mem_alloc': gc.mem_alloc(),
                 })))
 
+            gc.collect()
             sleep(conf.config.get('sleep_type', 'wait'), conf.config.get('sleep_time', 60000))
         except Exception as e:
             if type(e) != 'KeyboardInterrupt':
