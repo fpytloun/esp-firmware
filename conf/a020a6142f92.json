@@ -27,6 +27,6 @@
         }
     },
     "publish": {
-        "server": "curumo.domecek"
+        "server": "192.168.33.2"
     }
 }

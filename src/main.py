@@ -147,11 +147,10 @@ class Device(object):
     def publish_data(self, *args, **kwargs):
         for dat in self.read_data()[1]:
             self.mqtt.publish(self.publish['topic'], str(json.dumps(dat)))
-        print("Sent data to server {0}, topic {1}".format(self.publish['server'], self.publish['topic']))
-        # self.mqtt.disconnect()
+        print("Sent data to topic {0}".format(self.publish['topic']))
 
     def subscribe_data(self, *args, **kwargs):
-        print("Reading data from topic {1}".format(self.name, self.subscribe['topic']))
+        print("Reading data from topic {0}".format(self.name, self.subscribe['topic']))
         self.mqtt.check_msg()
 
 
@@ -241,11 +240,11 @@ def main():
                     raise e
                 else:
                     sys.print_exception(e)
-                    print("Sleeping for {0}".format(conf.config['exception_wait']))
+                    print("Sleeping for {0}".format(conf.config.get('exception_wait', 10)))
                     time.sleep(conf.config.get('exception_wait', 10))
                     if conf.config.get('exception_reset', False):
                         machine.reset()
-                    if conf.config.get('exception_exit', True):
+                    if conf.config.get('exception_exit', False):
                         sys.exit()
 
 
