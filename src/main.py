@@ -52,7 +52,7 @@ class Device(object):
             self.publish = publish
             self.publish['topic'] = publish.get('topic') or "{0}/{1}".format(publish['topic_base'], self.name)
             self.timer_publish = machine.Timer(-1)
-            self.timer_publish.init(period=publish['interval'] * 1000, mode=machine.Timer.PERIODIC, callback=self.publish_data)
+            self.timer_publish.init(period=publish.get('interval', 30) * 1000, mode=machine.Timer.PERIODIC, callback=self.publish_data)
 
         if subscribe:
             self.subscribe = subscribe
@@ -62,7 +62,7 @@ class Device(object):
             self.mqtt.set_callback(self._callback_subscribe)
             self.mqtt.subscribe(self.subscribe['topic'])
             self.timer_subscribe = machine.Timer(-1)
-            self.timer_subscribe.init(period=subscribe['interval'] * 1000, mode=machine.Timer.PERIODIC, callback=self.subscribe_data)
+            self.timer_subscribe.init(period=subscribe.get('interval', 10) * 1000, mode=machine.Timer.PERIODIC, callback=self.subscribe_data)
 
     def _callback_read(self, *args, **kwargs):
         self.events += 1
@@ -171,19 +171,11 @@ def sleep(sleep_type, sleep_time=60000):
 class Config(object):
     # Default configuration
     CONFIG = {
-        "sleep_type": "wait",
-        "sleep_time": 60000,
-        "exception_raise": False,
-        "exception_wait": 10,
-        "exception_reset": False,
-        "exception_exit": True,
         "publish": {
             "topic_base": "esp/{0}".format(MACHINE_ID),
-            "interval": 30,
         },
         "subscribe": {
             "topic_base": "esp/{0}".format(MACHINE_ID),
-            "interval": 10,
         },
     }
 
@@ -246,18 +238,18 @@ def main():
                 'mem_alloc': gc.mem_alloc(),
             })))
 
-            sleep(conf.config['sleep_type'], conf.config['sleep_time'])
+            sleep(conf.config.get('sleep_type', 'wait'), conf.config.get('sleep_time', 60000))
         except Exception as e:
             if type(e) != 'KeyboardInterrupt':
-                if conf.config.get('exception_raise', True):
+                if conf.config.get('exception_raise', False):
                     raise e
                 else:
                     sys.print_exception(e)
                     print("Sleeping for {0}".format(conf.config['exception_wait']))
-                    time.sleep(conf.config['exception_wait'])
-                    if conf.config['exception_reset']:
+                    time.sleep(conf.config.get('exception_wait', 10))
+                    if conf.config.get('exception_reset', False):
                         machine.reset()
-                    if conf.config['exception_exit']:
+                    if conf.config.get('exception_exit', True):
                         sys.exit()
 
 
