@@ -1,2 +1,5 @@
 .ropeproject
 .wireless
+*.mpy
+*.pyc
+*.pyo

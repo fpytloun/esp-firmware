@@ -25,7 +25,24 @@ Upload files:
 
 .. code-block:: bash
 
-    for i in src/*.py conf/<devicemac>.json .wireless; do  ampy -p /dev/ttyUSB0 put $i; done
+    for i in src/*.py conf/<devicemac>.json .wireless; do ampy -p /dev/ttyUSB0 put $i; done
+
+Build mpy files
+===============
+
+To optimize the code, you can build mpy files using ``mpy-cross`` tool (see
+https://github.com/micropython/micropython/tree/master/mpy-cross).
+
+.. code-block:: bash
+
+    ls src/*.py | while read i; do ./mpy-cross $i; done
+
+.. code-block:: bash
+
+    find src -name "*.mpy" -a ! -name "main.py" -a ! -name "boot.py" -exec ampy -p /dev/ttyUSB0 put {}\;
+    ampy -p /dev/ttyUSB0 put src/boot.py
+    ampy -p /dev/ttyUSB0 put src/main.py
+
 
 Troubleshooting
 ===============

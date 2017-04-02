@@ -34,7 +34,8 @@ cfg = read_wifi_config()
 print("Connecting to wireless network {0}".format(cfg[0]))
 connect_wifi(cfg[0], cfg[1])
 
-# import webrepl
-# webrepl.start()
+#import webrepl
+#webrepl.start()
+
 import gc
 gc.collect()
