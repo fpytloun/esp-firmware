@@ -1,42 +1,17 @@
 {
-    "friendly_name": "Portable",
+    "friendly_name": "Bathroom",
+    "sleep_type": "deepsleep",
     "device": {
         "dht22": {
             "pin": 14,
             "read": {
-                "function": "read_dht22",
-                "interval": 30
+                "function": "read_dht22"
             },
-            "publish": {
-                "interval": 60
-            }
-        },
-        "rpm": {
-            "pin": 12,
-            "read": {
-                "function": "read_rpm",
-                "irq": true
-            },
-            "publish": {
-                "interval": 60
-            }
-        },
-        "relay": {
-            "pin": 13,
-            "read": {
-                "function": "read_status",
-                "interval": 30
-            },
-            "publish": {
-                "interval": 60
-            },
-            "subscribe": {
-                "function": "toggle_status",
-                "interval": 10
-            }
+            "publish": {}
         }
     },
     "publish": {
-        "server": "curumo.domecek"
+        "server": "curumo.domecek",
+        "clean_session": true
     }
 }
