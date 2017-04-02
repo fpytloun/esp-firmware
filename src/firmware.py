@@ -71,8 +71,8 @@ def main():
     devices = {}
     while True:
         try:
-            if not mqtt.connect(clean_session=conf.config['publish'].get('clean_session', True)):
-                print("Reconnected to {0} as client {1}".format(conf.config['publish']['server'], MACHINE_ID))
+            if not mqtt.connect(clean_session=conf.config['publish'].get('clean_session', False)):
+                print("Connected to {0} as client {1}".format(conf.config['publish']['server'], MACHINE_ID))
 
             # Initialize devices objects if not initialized yet
             if not devices:

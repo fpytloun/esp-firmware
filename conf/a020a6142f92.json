@@ -1,5 +1,6 @@
 {
     "friendly_name": "Greenthumb",
+    "exception_reset": false,
     "device": {
         "dht22": {
             "pin": 14,
