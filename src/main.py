@@ -49,10 +49,10 @@ class Device(object):
 
         if publish:
             self.publish = publish
-            self.publish['topic'] = publish.get('topic') or "{0}/{1}".format(
+            self.publish['topic'] = bytes(publish.get('topic', "{0}/{1}".format(
                 publish.get('topic_base', "esp/{0}".format(MACHINE_ID)),
                 self.name
-            )
+            )), 'ascii')
             self.timer_publish = machine.Timer(-1)
             self.timer_publish.init(period=publish.get('interval', 30) * 1000, mode=machine.Timer.PERIODIC, callback=self.publish_data)
 
@@ -60,10 +60,10 @@ class Device(object):
             self.subscribe = subscribe
             func_name = subscribe.get('function', 'write_{0}'.format(name))
             self.function_write = getattr(self, func_name)
-            self.subscribe['topic'] = subscribe.get('topic') or "{0}/{1}/control".format(
+            self.subscribe['topic'] = bytes(subscribe.get('topic', "{0}/{1}/control".format(
                 subscribe.get('topic_base', "esp/{0}".format(MACHINE_ID)),
                 self.name
-            )
+            )), 'ascii')
             self.mqtt.set_callback(self._callback_subscribe)
             self.mqtt.subscribe(self.subscribe['topic'])
             self.timer_subscribe = machine.Timer(-1)
@@ -145,7 +145,7 @@ class Device(object):
 
     def publish_data(self, *args, **kwargs):
         for dat in self.read_data()[1]:
-            self.mqtt.publish(self.publish['topic'], str(json.dumps(dat)))
+            self.mqtt.publish(self.publish['topic'], bytes(json.dumps(dat), 'ascii'))
         print("Sent data to topic {0}".format(self.publish['topic']))
 
     def subscribe_data(self, *args, **kwargs):
@@ -197,7 +197,8 @@ class Config(object):
         with open(self.config_file, 'r') as fh:
             data = json.load(fh)
 
-        return self.dictmerge(self.CONFIG, data)
+        # return self.dictmerge(self.CONFIG, data)
+        return data
 
 
 def main():
@@ -223,13 +224,13 @@ def main():
                 conf.config['publish'].get('topic_base', "esp/{0}".format(MACHINE_ID))
             )))
             mqtt.publish("{0}/health".format(conf.config['publish'].get('topic_base', "esp/{0}".format(MACHINE_ID))),
-                str(json.dumps({
+                bytes(json.dumps({
                     'name': conf.config.get('friendly_name', MACHINE_ID),
                     'id': MACHINE_ID,
                     'uptime': time.ticks_ms(),
                     'mem_free': gc.mem_free(),
                     'mem_alloc': gc.mem_alloc(),
-                })))
+                }), 'ascii'))
 
             gc.collect()
             sleep(conf.config.get('sleep_type', 'wait'), conf.config.get('sleep_time', 60000))
