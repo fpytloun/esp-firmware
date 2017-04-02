@@ -13,7 +13,7 @@
             }
         },
         "relay": {
-            "pin": 13,
+            "pin": 4,
             "read": {
                 "function": "read_status",
                 "interval": 10
