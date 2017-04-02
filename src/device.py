@@ -9,7 +9,7 @@ MACHINE_ID = ubinascii.hexlify(network.WLAN().config('mac')).decode()
 
 
 class Device(object):
-    def __init__(self, name, pin, irq=False, read=None, publish=None, subscribe=None, mqtt=None, **kwargs):
+    def __init__(self, name, pin, irq=False, read=None, publish=None, subscribe=None, mqtt=None, oneshot=False, **kwargs):
         self.name = name
         self.kwargs = kwargs
         self.time = time.time()
@@ -32,23 +32,29 @@ class Device(object):
             self.read = read
             func_name = read.get('function', 'read_{0}'.format(name))
             self.function_read = getattr(self, func_name)
-            if read.get('irq'):
-                self.pin.irq(trigger=machine.Pin.IRQ_FALLING, handler=self._callback_read)
+            if oneshot:
+                self._callback_read()
             else:
-                # Gather data in given interval if we are not going to use IRQ
-                self.timer_callback = machine.Timer(-1)
-                self.timer_callback.init(period=self.read['interval'] * 1000, mode=machine.Timer.PERIODIC, callback=self._callback_read)
+                if read.get('irq'):
+                    self.pin.irq(trigger=machine.Pin.IRQ_FALLING, handler=self._callback_read)
+                else:
+                    # Gather data in given interval if we are not going to use IRQ
+                    self.timer_callback = machine.Timer(-1)
+                    self.timer_callback.init(period=self.read['interval'] * 1000, mode=machine.Timer.PERIODIC, callback=self._callback_read)
 
-        if publish:
+        if publish is not None:
             self.publish = publish
             self.publish['topic'] = bytes(publish.get('topic', "{0}/{1}".format(
                 publish.get('topic_base', "esp/{0}".format(MACHINE_ID)),
                 self.name
             )), 'ascii')
-            self.timer_publish = machine.Timer(-1)
-            self.timer_publish.init(period=publish.get('interval', 30) * 1000, mode=machine.Timer.PERIODIC, callback=self.publish_data)
+            if oneshot:
+                self.publish_data()
+            else:
+                self.timer_publish = machine.Timer(-1)
+                self.timer_publish.init(period=publish.get('interval', 30) * 1000, mode=machine.Timer.PERIODIC, callback=self.publish_data)
 
-        if subscribe:
+        if subscribe is not None:
             self.subscribe = subscribe
             func_name = subscribe.get('function', 'write_{0}'.format(name))
             self.function_write = getattr(self, func_name)
@@ -58,8 +64,11 @@ class Device(object):
             )), 'ascii')
             self.mqtt.set_callback(self._callback_subscribe)
             self.mqtt.subscribe(self.subscribe['topic'])
-            self.timer_subscribe = machine.Timer(-1)
-            self.timer_subscribe.init(period=subscribe.get('interval', 10) * 1000, mode=machine.Timer.PERIODIC, callback=self.subscribe_data)
+            if oneshot:
+                self.subscribe_data()
+            else:
+                self.timer_subscribe = machine.Timer(-1)
+                self.timer_subscribe.init(period=subscribe.get('interval', 10) * 1000, mode=machine.Timer.PERIODIC, callback=self.subscribe_data)
 
     def _callback_read(self, *args, **kwargs):
         self.events += 1

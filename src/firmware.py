@@ -67,36 +67,45 @@ class Config(object):
 
 def main():
     conf = Config()
-    client_id = "{0}".format(MACHINE_ID)
-    mqtt = MQTTClient(bytes(client_id, 'ascii'), bytes(conf.config['publish']['server'], 'ascii'))
+    mqtt = MQTTClient(bytes(MACHINE_ID, 'ascii'), bytes(conf.config['publish']['server'], 'ascii'))
     devices = {}
     while True:
         try:
-            if not mqtt.connect(clean_session=False):
-                print("Connected to {0} as client {1}".format(conf.config['publish']['server'], client_id))
+            if not mqtt.connect(clean_session=conf.config['publish'].get('clean_session', True)):
+                print("Reconnected to {0} as client {1}".format(conf.config['publish']['server'], MACHINE_ID))
 
             # Initialize devices objects if not initialized yet
             if not devices:
                 for name, args in conf.config.get('device', {}).items():
                     if name not in devices.keys():
                         args['mqtt'] = mqtt
+                        if conf.config.get('sleep_type', 'wait') == 'deepsleep':
+                            # We are going to deep sleep so don't setup IRQ,
+                            # timers, etc. but do the job immediately
+                            args['oneshot'] = True
                         print("Initializing device {0} with args {1}".format(name, args))
                         devices[name] = Device(name, **args)
 
             # Publish health
-            print("Publishing health status into topic {0}".format("{0}/health".format(
-                conf.config['publish'].get('topic_base', "esp/{0}".format(MACHINE_ID))
-            )))
-            mqtt.publish("{0}/health".format(conf.config['publish'].get('topic_base', "esp/{0}".format(MACHINE_ID))),
-                bytes(json.dumps({
-                    'name': conf.config.get('friendly_name', MACHINE_ID),
-                    'id': MACHINE_ID,
-                    'uptime': time.ticks_ms(),
-                    'mem_free': gc.mem_free(),
-                    'mem_alloc': gc.mem_alloc(),
-                }), 'ascii'))
+            if conf.config.get('publish_health', True):
+                print("Publishing health status into topic {0}".format("{0}/health".format(
+                    conf.config['publish'].get('topic_base', "esp/{0}".format(MACHINE_ID))
+                )))
+                mqtt.publish("{0}/health".format(conf.config['publish'].get('topic_base', "esp/{0}".format(MACHINE_ID))),
+                    bytes(json.dumps({
+                        'name': conf.config.get('friendly_name', MACHINE_ID),
+                        'id': MACHINE_ID,
+                        'uptime': time.ticks_ms(),
+                        'mem_free': gc.mem_free(),
+                        'mem_alloc': gc.mem_alloc(),
+                    }), 'ascii'))
 
-            gc.collect()
+            if conf.config.get('sleep_type', 'wait') == 'deepsleep':
+                # Cleanup as reset is comming with deepsleep, also no need to
+                # bother with gc.collect
+                mqtt.disconnect()
+            else:
+                gc.collect()
             sleep(conf.config.get('sleep_type', 'wait'), conf.config.get('sleep_time', 60000))
         except Exception as e:
             if type(e) != 'KeyboardInterrupt':
@@ -106,7 +115,7 @@ def main():
                     sys.print_exception(e)
                     print("Sleeping for {0}".format(conf.config.get('exception_wait', 10)))
                     time.sleep(conf.config.get('exception_wait', 10))
-                    if conf.config.get('exception_reset', False):
+                    if conf.config.get('exception_reset', True):
                         machine.reset()
                     if conf.config.get('exception_exit', False):
                         sys.exit()
