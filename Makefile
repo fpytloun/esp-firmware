@@ -11,7 +11,7 @@ help:
 deploy: build put
 
 build:
-	(ls src/*.py | while read i; do \
+	(ls src/lib/*.py | while read i; do \
 		echo "Building $$i"; \
 		mpy-cross $$i || exit 1; done)
 
@@ -54,7 +54,9 @@ image: micropython
 
 micropython-lib: submodule
 	(cd micropython-lib; \
-		make install PREFIX=$(CWD)/micropython/esp8266/modules MOD=umqtt.simple)
+		make install PREFIX=$(CWD)/micropython/esp8266/modules MOD=umqtt.simple; \
+		make install PREFIX=$(CWD)/micropython/esp8266/modules MOD=umqtt.robust; \
+	)
 
 mpy_cross: submodule
 	(cd micropython; make -C mpy-cross)
