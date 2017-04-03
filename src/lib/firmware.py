@@ -2,8 +2,8 @@ import sys
 import time
 import json
 import machine
-import network
 import ubinascii
+import network
 from umqtt.simple import MQTTClient
 
 import micropython
@@ -75,14 +75,11 @@ def main():
     devices = {}
     while True:
         try:
-            if not mqtt.connect(clean_session=conf.config['publish'].get('clean_session', False)):
-                print("Connected to {0} as client {1}".format(conf.config['publish']['server'], MACHINE_ID))
-
             # Initialize devices objects if not initialized yet
             if not devices:
                 for name, args in conf.config.get('device', {}).items():
                     if name not in devices.keys():
-                        args['mqtt'] = mqtt
+                        args['mqtt'] = (conf.config['publish']['server'],)
                         if conf.config.get('sleep_type', 'wait') == 'deepsleep':
                             # We are going to deep sleep so don't setup IRQ,
                             # timers, etc. but do the job immediately
@@ -92,6 +89,9 @@ def main():
 
             # Publish health
             if conf.config.get('publish_health', True):
+                if not mqtt.connect(clean_session=conf.config['publish'].get('clean_session', True)):
+                    print("Connected to {0} as client {1}".format(conf.config['publish']['server'], MACHINE_ID))
+
                 print("Publishing health status into topic {0}".format("{0}/health".format(
                     conf.config['publish'].get('topic_base', "esp/{0}".format(MACHINE_ID))
                 )))
@@ -104,12 +104,12 @@ def main():
                         'mem_alloc': gc.mem_alloc(),
                     }), 'ascii'))
 
+            mqtt.disconnect()
             if conf.config.get('sleep_type', 'wait') == 'deepsleep':
                 # Cleanup as reset is comming with deepsleep, also no need to
                 # bother with gc.collect
-                mqtt.disconnect()
+                pass
             else:
-                mqtt.ping()
                 gc.collect()
             sleep(conf.config.get('sleep_type', 'wait'), conf.config.get('sleep_time', 60000))
         except Exception as e:
