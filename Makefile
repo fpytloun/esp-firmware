@@ -2,7 +2,13 @@ CWD=$(shell pwd)
 
 .PHONY: espsdk micropython micropython-lib
 
-all: build put
+help:
+	@echo "Available actions:"
+	@echo "  deploy      Build and write everything to device"
+	@echo "  flash       Build flash image and write it into device"
+	@echo "  image       Only build flash image (without writing to device)"
+
+deploy: build put
 
 build:
 	(ls src/*.py | while read i; do \
@@ -43,6 +49,8 @@ espsdk: submodule
 micropython: submodule espsdk mpy_cross micropython-lib
 	cp src/lib/* micropython/esp8266/modules/
 	(cd micropython/esp8266; export PATH=$${PATH}:$(CWD)/espsdk/crosstool-NG/bin:$(CWD)/espsdk/xtensa-lx106-elf/bin; make -j4)
+
+image: micropython
 
 micropython-lib: submodule
 	(cd micropython-lib; \
