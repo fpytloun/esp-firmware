@@ -1,5 +1,6 @@
 .ropeproject
 .wireless
+webrepl_cfg.py
 *.mpy
 *.pyc
 *.pyo

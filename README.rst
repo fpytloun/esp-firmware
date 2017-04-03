@@ -5,7 +5,7 @@ Micropython firmware for ESP8266
 Quickstart
 ==========
 
-Flash firmware:
+Flash stock firmware:
 
 .. code-block:: bash
 
@@ -21,11 +21,11 @@ Create simple ``.wireless`` file containing:
 Next prepare config file for your device, it must be named by your device's
 MAC address. Example files can be found in conf directory.
 
-Upload files:
+Upload files (ensure you have ampy installed):
 
 .. code-block:: bash
 
-    for i in src/*.py conf/<devicemac>.json .wireless; do ampy -p /dev/ttyUSB0 put $i; done
+    make put
 
 Build mpy files
 ===============
@@ -43,6 +43,10 @@ https://github.com/micropython/micropython/tree/master/mpy-cross).
     ampy -p /dev/ttyUSB0 put src/boot.py
     ampy -p /dev/ttyUSB0 put src/main.py
 
+Bundle with flash image
+=======================
+
+Simply run ``make flash`` and it should do everything for you.
 
 Troubleshooting
 ===============

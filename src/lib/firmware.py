@@ -118,6 +118,12 @@ def main():
                     raise e
                 else:
                     sys.print_exception(e)
+                    print('Meminfo:')
+                    micropython.mem_info()
+                    print("Free: {0}, Allocated: {1}".format(gc.mem_free(), gc.mem_alloc()))
+                    print ("Running garbage collector..")
+                    gc.collect()
+                    print("Free: {0}, Allocated: {1}".format(gc.mem_free(), gc.mem_alloc()))
                     print("Sleeping for {0}".format(conf.config.get('exception_wait', 10)))
                     time.sleep(conf.config.get('exception_wait', 10))
                     if conf.config.get('exception_reset', True):
