@@ -1,4 +1,3 @@
-import dht
 import time
 import machine
 import json
@@ -101,6 +100,7 @@ class Device(object):
             self.publish_data(*args, **kwargs)
 
     def read_dht11(self, *args, **kwargs):
+        import dht
         d = dht.DHT11(machine.Pin(self.pin_id))
         d.measure()
         print("{0}: {1}C, {2}%".format(self.name, d.temperature(), d.humidity()))
@@ -128,6 +128,7 @@ class Device(object):
         })
 
     def read_dht22(self, *args, **kwargs):
+        import dht
         d = dht.DHT22(machine.Pin(self.pin_id))
         d.measure()
         print("{0}: {1}C, {2}%".format(self.name, d.temperature(), d.humidity()))
@@ -135,6 +136,23 @@ class Device(object):
             'temperature': d.temperature(),
             'humidity': d.humidity()
         })
+
+    def read_ds18x20(self, *args, **kwargs):
+        import onewire
+        import ds18x20
+        ds = ds18x20.DS18X20(onewire.OneWire(self.pin))
+        devs = ds.scan()
+        ds.convert_temp()
+        time.sleep_ms(750)
+
+        data = {}
+        i = 0
+        for dev in devs:
+            data['temperature{0}'.format(i)] = ds.read_temp(dev)
+            print("{0}: {1}={2}C".format(self.name, i, data['temperature{0}'.format(i)]))
+            i += 1
+
+        return data
 
     def read_rpm(self, *args, **kwargs):
         pass
