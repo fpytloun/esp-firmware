@@ -67,12 +67,17 @@ class Config(object):
 
 def main():
     conf = Config()
-    mqtt = MQTTClient(bytes(MACHINE_ID, 'ascii'), bytes(conf.config['publish']['server'], 'ascii'))
+    mqtt = MQTTClient(
+        bytes(MACHINE_ID, 'ascii'),
+        bytes(conf.config['publish']['server'], 'ascii'),
+        keepalive=conf.config['publish'].get('keepalive', 0)
+    )
     devices = {}
     while True:
         try:
             if not mqtt.connect(clean_session=conf.config['publish'].get('clean_session', False)):
                 print("Connected to {0} as client {1}".format(conf.config['publish']['server'], MACHINE_ID))
+            mqtt.ping()
 
             # Initialize devices objects if not initialized yet
             if not devices:
