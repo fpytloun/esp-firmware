@@ -82,6 +82,7 @@ class Device(object):
         data = self.function_write(*args, **kwargs)
         if data:
             self.data.append(data)
+            self.publish_data(*args, **kwargs)
 
     def read_dht11(self, *args, **kwargs):
         d = dht.DHT11(machine.Pin(self.pin_id))
@@ -100,9 +101,15 @@ class Device(object):
 
     def write_status(self, topic, value):
         self.pin_out.value(int(value))
+        return({
+            'value': value
+        })
 
     def toggle_status(self, *args, **kwargs):
         self.pin_out.value(0 if self.pin.value() else 1)
+        return({
+            'value': self.pin.value()
+        })
 
     def read_dht22(self, *args, **kwargs):
         d = dht.DHT22(machine.Pin(self.pin_id))
