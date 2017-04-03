@@ -1,5 +1,6 @@
 import sys
 import time
+import socket
 import json
 import machine
 import ubinascii
@@ -120,10 +121,10 @@ def main():
                     sys.print_exception(e)
                     print('Meminfo:')
                     micropython.mem_info()
-                    print("Free: {0}, Allocated: {1}".format(gc.mem_free(), gc.mem_alloc()))
+                    print('Sockets:')
+                    socket.print_pcbs()
                     print ("Running garbage collector..")
                     gc.collect()
-                    print("Free: {0}, Allocated: {1}".format(gc.mem_free(), gc.mem_alloc()))
                     print("Sleeping for {0}".format(conf.config.get('exception_wait', 10)))
                     time.sleep(conf.config.get('exception_wait', 10))
                     if conf.config.get('exception_reset', True):

@@ -28,6 +28,9 @@ class Device(object):
         else:
             self.mqtt = mqtt
 
+        if not self.mqtt.connect(clean_session=True):
+            print("Connected to MQTT as client {0}".format(self.mqtt.client_id))
+
         try:
             func_sample = kwargs.get('function_sample', 'sample_{0}'.format(name))
             self.function_sample = getattr(self, func_sample)
@@ -76,6 +79,7 @@ class Device(object):
                 self.name
             )), 'ascii')
             self.mqtt.set_callback(self._callback_subscribe)
+            self.mqtt.subscribe(self.subscribe['topic'])
             if oneshot:
                 self.subscribe_data()
             else:
@@ -164,17 +168,10 @@ class Device(object):
         return ret
 
     def publish_data(self, *args, **kwargs):
-        if not self.mqtt.connect(clean_session=True):
-            print("Connected to MQTT as client {1}".format(self.mqtt.client_id))
         for dat in self.read_data()[1]:
             self.mqtt.publish(self.publish['topic'], bytes(json.dumps(dat), 'ascii'))
         print("Sent data to topic {0}".format(self.publish['topic']))
-        self.mqtt.disconnect()
 
     def subscribe_data(self, *args, **kwargs):
         print("Reading data from topic {0}".format(self.name, self.subscribe['topic']))
-        if not self.mqtt.connect(clean_session=True):
-            print("Connected to MQTT as client {1}".format(self.mqtt.client_id))
-        self.mqtt.subscribe(self.subscribe['topic'])
         self.mqtt.check_msg()
-        self.mqtt.disconnect()
