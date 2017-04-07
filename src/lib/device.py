@@ -3,13 +3,13 @@ import machine
 import json
 from umqtt.simple import MQTTClient
 
-import ubinascii
-import network
-MACHINE_ID = ubinascii.hexlify(network.WLAN().config('mac')).decode()
+from ubinascii import hexlify
+from network import WLAN
+MACHINE_ID = hexlify(WLAN().config('mac')).decode()
 
 
 class Device(object):
-    def __init__(self, name, pin, irq=False, read=None, publish=None, subscribe=None, mqtt=None, oneshot=False, **kwargs):
+    def __init__(self, name, pin=None, pwm=None, freq=1000, duty=1024, irq=False, read=None, publish=None, subscribe=None, mqtt=None, oneshot=False, **kwargs):
         self.name = name
         self.kwargs = kwargs
         self.time = time.time()
@@ -39,9 +39,14 @@ class Device(object):
         self.events = 0
         self.data = []
 
-        self.pin_id = pin
-        self.pin = machine.Pin(pin, machine.Pin.IN)
-        self.pin_out = machine.Pin(pin, machine.Pin.OUT, value=self.pin.value)
+        if pin:
+            self.pin_id = pin
+            self.pin = machine.Pin(pin, machine.Pin.IN)
+            self.pin_out = machine.Pin(pin, machine.Pin.OUT, value=self.pin.value)
+
+        if pwm:
+            self.pwm_id = pwm
+            self.pwm = machine.PWM(machine.Pin(pwm), freq=freq, duty=duty)
 
         if read:
             self.read = read
@@ -115,6 +120,22 @@ class Device(object):
             'value': self.pin.value()
         })
 
+    def read_pwm(self, *args, **kwargs):
+        return({
+            'freq': self.pwm.freq(),
+            'duty': self.pwm.duty(),
+        })
+
+    def write_pwm(self, topic, data):
+        param = json.loads(data)
+        if param.get('freq'):
+            print("{0}: setting pwm freq to {1}".format(self.name, param['freq']))
+            self.pwm.freq(param['freq'])
+        if param.get('duty'):
+            print("{0}: setting pwm duty to {1}".format(self.name, param['duty']))
+            self.pwm.duty(param['duty'])
+        return(param)
+
     def write_status(self, topic, value):
         self.pin_out.value(int(value))
         return({
@@ -186,8 +207,11 @@ class Device(object):
         return ret
 
     def publish_data(self, *args, **kwargs):
-        for dat in self.read_data()[1]:
-            self.mqtt.publish(self.publish['topic'], bytes(json.dumps(dat), 'ascii'))
+        if self.publish.get('retain', False):
+            self.mqtt.publish(self.publish['topic'], bytes(json.dumps(self.read_data()[1][-1]), 'ascii'), retain=True)
+        else:
+            for dat in self.read_data()[1]:
+                self.mqtt.publish(self.publish['topic'], bytes(json.dumps(dat), 'ascii'))
         print("Sent data to topic {0}".format(self.publish['topic']))
 
     def subscribe_data(self, *args, **kwargs):

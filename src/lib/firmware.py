@@ -3,19 +3,19 @@ import time
 import socket
 import json
 import machine
-import ubinascii
-import network
 from umqtt.simple import MQTTClient
 
 import micropython
 micropython.alloc_emergency_exception_buf(100)
 
+from ubinascii import hexlify
+from network import WLAN
+MACHINE_ID = hexlify(WLAN().config('mac')).decode()
+
 from device import Device
 
 import gc
 gc.collect()
-
-MACHINE_ID = ubinascii.hexlify(network.WLAN().config('mac')).decode()
 
 
 def sleep(sleep_type, sleep_time=60000):
@@ -114,7 +114,7 @@ def main():
                 gc.collect()
             sleep(conf.config.get('sleep_type', 'wait'), conf.config.get('sleep_time', 60000))
         except Exception as e:
-            if type(e) != 'KeyboardInterrupt':
+            if type(e) != KeyboardInterrupt:
                 if conf.config.get('exception_raise', False):
                     raise e
                 else:

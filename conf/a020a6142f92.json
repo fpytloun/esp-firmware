@@ -13,16 +13,34 @@
             }
         },
         "relay": {
-            "pin": 4,
+            "pin": 12,
             "read": {
                 "function": "read_status",
                 "interval": 10
             },
             "publish": {
+                "retain": true,
                 "interval": 10
             },
             "subscribe": {
                 "function": "write_status",
+                "interval": 10
+            }
+        },
+        "pwm": {
+            "pwm": 5,
+            "freq": 1000,
+            "duty": 512,
+            "read": {
+                "function": "read_pwm",
+                "interval": 10
+            },
+            "publish": {
+                "retain": true,
+                "interval": 10
+            },
+            "subscribe": {
+                "function": "write_pwm",
                 "interval": 10
             }
         }
