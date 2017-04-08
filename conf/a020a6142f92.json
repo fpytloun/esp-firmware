@@ -31,6 +31,10 @@
             "pwm": 5,
             "freq": 1000,
             "duty": 512,
+            "fade": {
+                "sleep": 200,
+                "step": 50
+            },
             "read": {
                 "function": "read_pwm",
                 "interval": 10

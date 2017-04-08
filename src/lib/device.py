@@ -126,6 +126,26 @@ class Device(object):
             'duty': self.pwm.duty(),
         })
 
+    def _fade_pwm(self, value, step=100, sleep=500):
+        cur = self.pwm.duty()
+        while cur != value:
+            if value > cur:
+                # We are putting duty higher
+                new = cur + step
+                if new > value:
+                    self.pwm.duty(value)
+                else:
+                    self.pwm.duty(new)
+            else:
+                # Put duty lower
+                new = cur - step
+                if new < value:
+                    self.pwm.duty(value)
+                else:
+                    self.pwm.duty(new)
+            time.sleep_ms(sleep)
+            cur = self.pwm.duty()
+
     def write_pwm(self, topic, data):
         param = json.loads(data)
         if param.get('freq'):
@@ -133,7 +153,12 @@ class Device(object):
             self.pwm.freq(param['freq'])
         if param.get('duty'):
             print("{0}: setting pwm duty to {1}".format(self.name, param['duty']))
-            self.pwm.duty(param['duty'])
+            if self.kwargs.get('fade'):
+                self._fade_pwm(param['duty'],
+                               step=self.kwargs['fade'].get('step', 100),
+                               sleep=self.kwargs['fade'].get('sleep', 500))
+            else:
+                self.pwm.duty(param['duty'])
         return(param)
 
     def write_status(self, topic, value):
